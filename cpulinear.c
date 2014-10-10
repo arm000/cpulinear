@@ -159,7 +159,7 @@ int main(void)
 	// create a window with the provided parameters
 	win = XCreateWindow (
 		x_display, root,
-		0, 0, 800, 480, 0,
+		0, 0, 256, 256, 0,
 		CopyFromParent, InputOutput,
 		CopyFromParent, CWEventMask,
 		&swa);
@@ -265,11 +265,6 @@ int main(void)
 		fprintf(stderr, "Unable to get uniform location\n");
 		return 1;
 	}
-
-
-	const float
-		window_width  = 800.0,
-		window_height = 480.0;
 
 	// this is needed for time measuring  -->  frames per second
 	struct timezone tz;
