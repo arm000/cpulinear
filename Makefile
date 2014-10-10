@@ -1,0 +1,2 @@
+cpulinear: cpulinear.c Makefile
+	gcc -o $@ $< -lm -lX11 -lEGL -lGLESv2
