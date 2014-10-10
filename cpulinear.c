@@ -24,11 +24,10 @@ const char vertex_src[] =
 "                                        \
    attribute vec4        position;       \
    varying mediump vec2  pos;            \
-   uniform vec4          offset;         \
                                          \
    void main()                           \
    {                                     \
-      gl_Position = position + offset;   \
+      gl_Position = position;            \
       pos = position.xy;                 \
    }                                     \
 ";
@@ -91,15 +90,10 @@ EGLContext  egl_context;
 EGLSurface  egl_surface;
 
 GLfloat
-   norm_x    =  0.0,
-   norm_y    =  0.0,
-   offset_x  =  0.0,
-   offset_y  =  0.0,
    p1_pos_x  =  0.0,
    p1_pos_y  =  0.0;
 
 GLint
-   offset_loc,
    position_loc;
 
 
@@ -129,26 +123,6 @@ void render(void)
 		donesetup = 1;
 	}
 	glClear(GL_COLOR_BUFFER_BIT);
-
-
-	// if the position of the texture has changed due to user action
-	if (update_pos) {
-		GLfloat old_offset_x = offset_x;
-		GLfloat old_offset_y = offset_y;
-
-		offset_x = norm_x - p1_pos_x;
-		offset_y = norm_y - p1_pos_y;
-
-		p1_pos_x = norm_x;
-		p1_pos_y = norm_y;
-
-		offset_x += old_offset_x;
-		offset_y += old_offset_y;
-
-		update_pos = false;
-	}
-
-	glUniform4f(offset_loc, offset_x, offset_y, 0.0, 0.0);
 
 	glVertexAttribPointer(position_loc, 3, GL_FLOAT, false, 0, vertexArray);
 	glEnableVertexAttribArray(position_loc);
@@ -180,7 +154,7 @@ int main(void)
 	Window root = DefaultRootWindow(x_display);
 
 	XSetWindowAttributes swa;
-	swa.event_mask = ExposureMask | PointerMotionMask | KeyPressMask;
+	swa.event_mask = ExposureMask | KeyPressMask;
 
 	// create a window with the provided parameters
 	win = XCreateWindow (
@@ -234,9 +208,9 @@ int main(void)
 	xev.xclient.format       = 32;
 	xev.xclient.data.l[0]    = 1;
 	xev.xclient.data.l[1]    = fullscreen;
-	XSendEvent (                // send an event mask to the X-server
+	XSendEvent(                // send an event mask to the X-server
 		x_display,
-		DefaultRootWindow ( x_display ),
+		DefaultRootWindow(x_display),
 		False,
 		SubstructureNotifyMask,
 		&xev );
@@ -322,8 +296,7 @@ int main(void)
 
 	// now get the locations (kind of handle) of the shaders variables
 	position_loc = glGetAttribLocation(shaderProgram, "position");
-	offset_loc = glGetUniformLocation(shaderProgram, "offset");
-	if (position_loc < 0 ||  offset_loc < 0) {
+	if (position_loc < 0) {
 		fprintf(stderr, "Unable to get uniform location\n");
 		return 1;
 	}
@@ -346,14 +319,6 @@ int main(void)
 		while (XPending(x_display)) {
 			XEvent  xev;
 			XNextEvent(x_display, &xev);
-
-			if (xev.type == MotionNotify) {  // if mouse has moved
-				GLfloat window_y =(window_height - xev.xmotion.y) - window_height / 2.0;
-				norm_y = window_y / (window_height / 2.0);
-				GLfloat window_x  = xev.xmotion.x - window_width / 2.0;
-				norm_x =  window_x / (window_width / 2.0);
-				update_pos = true;
-			}
 
 			if (xev.type == KeyPress)
 				quit = true;
