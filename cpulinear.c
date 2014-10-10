@@ -171,21 +171,6 @@ int main(void)
 	xattr.override_redirect = False;
 	XChangeWindowAttributes(x_display, win, CWOverrideRedirect, &xattr);
 
-#if 0
-	atom = XInternAtom ( x_display, "_NET_WM_STATE_FULLSCREEN", True );
-	XChangeProperty (
-		x_display, win,
-		XInternAtom ( x_display, "_NET_WM_STATE", True ),
-		XA_ATOM,  32,  PropModeReplace,
-		(unsigned char*) &atom,  1 );
-
-	XChangeProperty (
-		x_display, win,
-		XInternAtom ( x_display, "_HILDON_NON_COMPOSITED_WINDOW", True ),
-		XA_INTEGER,  32,  PropModeReplace,
-		(unsigned char*) &one,  1);
-#endif
-
 	XWMHints hints;
 	hints.input = True;
 	hints.flags = InputHint;
@@ -194,26 +179,6 @@ int main(void)
 	// make the window visible on the screen
 	XMapWindow(x_display, win);
 	XStoreName(x_display, win, "GL test" ); // give the window a name
-
-	// get identifiers for the provided atom name strings
-	Atom wm_state   = XInternAtom(x_display, "_NET_WM_STATE", False);
-	Atom fullscreen = XInternAtom(x_display, "_NET_WM_STATE_FULLSCREEN", False);
-
-	XEvent xev;
-	memset(&xev, 0, sizeof(xev));
-
-	xev.type                 = ClientMessage;
-	xev.xclient.window       = win;
-	xev.xclient.message_type = wm_state;
-	xev.xclient.format       = 32;
-	xev.xclient.data.l[0]    = 1;
-	xev.xclient.data.l[1]    = fullscreen;
-	XSendEvent(                // send an event mask to the X-server
-		x_display,
-		DefaultRootWindow(x_display),
-		False,
-		SubstructureNotifyMask,
-		&xev );
 
 
 	///////  the egl part  /////////////////////////////////////////////
