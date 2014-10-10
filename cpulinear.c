@@ -36,13 +36,12 @@ const char vertex_src[] =
 const char fragment_src[] =
 "                                                      \
    varying mediump vec2    pos;                        \
-   uniform mediump float   phase;                      \
                                                        \
    void  main()                                        \
    {                                                   \
       gl_FragColor  =  vec4( 1., 0.9, 0.7, 1.0 ) *     \
         cos( 30.*sqrt(pos.x*pos.x + 1.5*pos.y*pos.y)   \
-             + atan(pos.y,pos.x) - phase );            \
+             + atan(pos.y,pos.x));                     \
    }                                                   \
 ";
 //  some more formulas to play with...
@@ -100,7 +99,6 @@ GLfloat
    p1_pos_y  =  0.0;
 
 GLint
-   phase_loc,
    offset_loc,
    position_loc;
 
@@ -118,7 +116,6 @@ const float vertexArray[] = {
 
 void render(void)
 {
-	static float phase = 0;
 	static int donesetup = 0;
 
 	static XWindowAttributes gwa;
@@ -133,10 +130,6 @@ void render(void)
 	}
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	// write the value of phase to the shaders phase
-	glUniform1f(phase_loc, phase);
-	// and update the local variable
-	phase = fmodf(phase + 0.5f, 2.f * 3.141f);
 
 	// if the position of the texture has changed due to user action
 	if (update_pos) {
@@ -329,9 +322,8 @@ int main(void)
 
 	// now get the locations (kind of handle) of the shaders variables
 	position_loc = glGetAttribLocation(shaderProgram, "position");
-	phase_loc = glGetUniformLocation(shaderProgram, "phase");
 	offset_loc = glGetUniformLocation(shaderProgram, "offset");
-	if (position_loc < 0 ||  phase_loc < 0 ||  offset_loc < 0) {
+	if (position_loc < 0 ||  offset_loc < 0) {
 		fprintf(stderr, "Unable to get uniform location\n");
 		return 1;
 	}
