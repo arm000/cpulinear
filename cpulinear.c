@@ -1,11 +1,3 @@
-/* Created by exoticorn ( http://talk.maemo.org/showthread.php?t=37356 )
- * edited and commented by André Bergner [endboss]
- *
- * libraries needed:   libx11-dev, libgles2-dev
- *
- * compile with:   g++  -lX11 -lEGL -lGLESv2  egl-example.cpp
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,29 +35,26 @@ const char fragment_src[] =
              + atan(pos.y,pos.x));                     \
    }                                                   \
 ";
-//  some more formulas to play with...
-//      cos( 20.*(pos.x*pos.x + pos.y*pos.y) - phase );
-//      cos( 20.*sqrt(pos.x*pos.x + pos.y*pos.y) + atan(pos.y,pos.x) - phase );
-//      cos( 30.*sqrt(pos.x*pos.x + 1.5*pos.y*pos.y - 1.8*pos.x*pos.y*pos.y)
-//            + atan(pos.y,pos.x) - phase );
 
 
 void print_shader_info_log(GLuint shader)
 {
 	GLint length;
+	GLint success;
 
 	glGetShaderiv(shader ,GL_INFO_LOG_LENGTH, &length);
 
 	if (length > 1) {
 		char *buffer = (char *)malloc(length);
 		glGetShaderInfoLog (shader, length , NULL, buffer);
-		printf("shader info: %s\n", buffer);
+		printf("%s\n", buffer);
 		free(buffer);
+	}
 
-		GLint success;
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-		if (success != GL_TRUE)
-			exit(1);
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+	if (success != GL_TRUE) {
+		fprintf(stderr, "Error compiling shader\n");
+		exit(1);
 	}
 }
 
