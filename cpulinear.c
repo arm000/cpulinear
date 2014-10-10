@@ -169,12 +169,6 @@ int main(void)
 	XMapWindow(x_display, win);
 	XStoreName(x_display, win, "GL test" ); // give the window a name
 
-
-	///////  the egl part  /////////////////////////////////////////////
-	//  egl provides an interface to connect the graphics related functionality of openGL ES
-	//  with the windowing interface and functionality of the native operation system (X11
-	//  in our case.
-
 	egl_display = eglGetDisplay((EGLNativeDisplayType) x_display);
 	if (egl_display == EGL_NO_DISPLAY) {
 		fprintf(stderr, "Got no EGL display.\n");
@@ -187,7 +181,7 @@ int main(void)
 	}
 
 	EGLint attr[] = {       // some attributes to set up our egl-interface
-		EGL_BUFFER_SIZE, 16,
+		EGL_BUFFER_SIZE, 32,
 		EGL_RENDERABLE_TYPE,
 		EGL_OPENGL_ES2_BIT,
 		EGL_NONE
