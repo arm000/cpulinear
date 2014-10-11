@@ -13,29 +13,23 @@
 #include <EGL/egl.h>
 
 const char vertex_src[] =
-"                                        \
-   attribute vec4        position;       \
-   varying mediump vec2  pos;            \
-                                         \
-   void main()                           \
-   {                                     \
-      gl_Position = position;            \
-      pos = position.xy;                 \
-   }                                     \
-";
+	"attribute vec4 a_position;   \n"
+	"attribute vec2 a_texCoord;   \n"
+	"varying vec2 v_texCoord;     \n"
+	"void main()                  \n"
+	"{                            \n"
+	"   gl_Position = a_position; \n"
+	"   v_texCoord = a_texCoord;  \n"
+	"}                            \n";
 
 const char fragment_src[] =
-"                                                      \
-   varying mediump vec2    pos;                        \
-                                                       \
-   void  main()                                        \
-   {                                                   \
-      gl_FragColor  =  vec4( 1., 0.9, 0.7, 1.0 ) *     \
-        cos( 30.*sqrt(pos.x*pos.x + 1.5*pos.y*pos.y)   \
-             + atan(pos.y,pos.x));                     \
-   }                                                   \
-";
-
+	"precision mediump float;                            \n"
+	"varying vec2 v_texCoord;                            \n"
+	"uniform sampler2D s_texture;                        \n"
+	"void main()                                         \n"
+	"{                                                   \n"
+	"  gl_FragColor = texture2D(s_texture, v_texCoord);  \n"
+	"}                                                   \n";
 
 void print_shader_info_log(GLuint shader)
 {
@@ -71,6 +65,39 @@ GLuint load_shader(const char *shader_source, GLenum type)
 	return shader;
 }
 
+GLuint upload_texture(void)
+{
+   // Texture object handle
+   GLuint textureId;
+
+   // 2x2 Image, 3 bytes per pixel (R, G, B)
+   GLubyte pixels[4 * 3] =
+   {
+      255,   0,   0, // Red
+        0, 255,   0, // Green
+        0,   0, 255, // Blue
+      255, 255,   0  // Yellow
+   };
+
+   // Use tightly packed data
+   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+   // Generate a texture object
+   glGenTextures(1, &textureId);
+
+   // Bind the texture object
+   glBindTexture(GL_TEXTURE_2D, textureId);
+
+   // Load the texture
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE,
+		pixels);
+
+   // Set the filtering mode
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+   return textureId;
+}
 
 Display    *x_display;
 Window      win;
@@ -82,18 +109,25 @@ GLfloat
    p1_pos_x  =  0.0,
    p1_pos_y  =  0.0;
 
-GLint
-   position_loc;
+GLint position_loc;
+GLint texture_loc;
+GLint sampler_loc;
 
+GLuint texture_id;
 
 bool        update_pos = false;
 
-const float vertexArray[] = {
+const GLfloat vertexArray[] = {
   -1.0, -1.0,  0.0,
+   0.0,  0.0,
   -1.0,  1.0,  0.0,
+   0.0,  1.0,
    1.0,  1.0,  0.0,
+   1.0,  1.0,
    1.0, -1.0,  0.0,
-  -1.0, -1.0,  0.0
+   1.0,  0.0,
+  -1.0, -1.0,  0.0,
+   0.0,  0.0
 };
 
 
@@ -111,10 +145,23 @@ void render(void)
 		glClearColor(0.08, 0.06, 0.07, 1.);    // background color
 		donesetup = 1;
 	}
-	glClear(GL_COLOR_BUFFER_BIT);
+//	glClear(GL_COLOR_BUFFER_BIT);
 
-	glVertexAttribPointer(position_loc, 3, GL_FLOAT, false, 0, vertexArray);
+	glVertexAttribPointer(position_loc, 3, GL_FLOAT, GL_FALSE,
+			      5 * sizeof (GLfloat), vertexArray);
 	glEnableVertexAttribArray(position_loc);
+
+	glVertexAttribPointer(texture_loc, 2, GL_FLOAT, GL_FALSE,
+			      5 * sizeof (GLfloat), &vertexArray[3]);
+	glEnableVertexAttribArray(texture_loc);
+
+	// Bind the texture
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture_id);
+
+	// Set the sampler texture unit to 0
+	glUniform1i(sampler_loc, 0);
+
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 5);
 
 	// get the rendered buffer to the screen
@@ -242,10 +289,25 @@ int main(void)
 	glLinkProgram(shaderProgram);    // link the program
 	glUseProgram(shaderProgram);    // and select it for usage
 
-	// now get the locations (kind of handle) of the shaders variables
-	position_loc = glGetAttribLocation(shaderProgram, "position");
+	// upload the texture
+	texture_id = upload_texture();
+
+	// now get the locations of the shaders variables
+	position_loc = glGetAttribLocation(shaderProgram, "a_position");
 	if (position_loc < 0) {
-		fprintf(stderr, "Unable to get uniform location\n");
+		fprintf(stderr, "Unable to get position location\n");
+		return 1;
+	}
+	texture_loc = glGetAttribLocation(shaderProgram, "a_texCoord");
+	if (texture_loc < 0) {
+		fprintf(stderr, "Unable to get texture location\n");
+		return 1;
+	}
+
+	// Get the sampler location
+	sampler_loc = glGetUniformLocation(shaderProgram, "s_texture");
+	if (sampler_loc < 0) {
+		fprintf(stderr, "Unable to get sampler location\n");
 		return 1;
 	}
 
