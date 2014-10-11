@@ -12,6 +12,9 @@
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
 
+#define WIDTH 256
+#define HEIGHT 256
+
 const char vertex_src[] =
 	"attribute vec4 a_position;   \n"
 	"attribute vec2 a_texCoord;   \n"
@@ -195,7 +198,7 @@ int main(void)
 	// create a window with the provided parameters
 	win = XCreateWindow (
 		x_display, root,
-		0, 0, 256, 256, 0,
+		0, 0, WIDTH, HEIGHT, 0,
 		CopyFromParent, InputOutput,
 		CopyFromParent, CWEventMask,
 		&swa);
@@ -317,8 +320,9 @@ int main(void)
 	gettimeofday(&t1, &tz);
 	int num_frames = 0;
 
+	// main draw loop
 	bool quit = false;
-	while (!quit) {    // the main loop
+	while (!quit) {
 
 		// check for events from the x-server
 		while (XPending(x_display)) {
@@ -335,10 +339,10 @@ int main(void)
 			gettimeofday( &t2, &tz );
 			float dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
 			printf("fps: %f\n", num_frames / dt);
+			printf("fill rate: %f MiB/s\n", (num_frames * WIDTH * HEIGHT * 4)/ (dt * 1024. * 1024.));
 			num_frames = 0;
 			t1 = t2;
 		}
-//      usleep( 1000*10 );
 	}
 
 
