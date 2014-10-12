@@ -22,6 +22,33 @@ GLubyte *textures[4];
 #define WIDTH 256
 #define HEIGHT 256
 
+Display    *x_display;
+Window      win;
+EGLDisplay  egl_display;
+EGLContext  egl_context;
+EGLSurface  egl_surface;
+
+GLint position_loc;
+GLint texture_loc;
+GLint sampler_loc;
+
+GLuint texture_id;
+
+bool update_pos = false;
+
+const GLfloat vertexArray[] = {
+  -1.0, -1.0,  0.0,
+   0.0,  1.0,
+  -1.0,  1.0,  0.0,
+   0.0,  0.0,
+   1.0,  1.0,  0.0,
+   1.0,  0.0,
+   1.0, -1.0,  0.0,
+   1.0,  1.0,
+  -1.0, -1.0,  0.0,
+   0.0,  1.0
+};
+
 const char vertex_src[] =
 	"attribute vec4 a_position;   \n"
 	"attribute vec2 a_texCoord;   \n"
@@ -99,38 +126,6 @@ GLuint upload_texture(void)
 
    return textureId;
 }
-
-Display    *x_display;
-Window      win;
-EGLDisplay  egl_display;
-EGLContext  egl_context;
-EGLSurface  egl_surface;
-
-GLfloat
-   p1_pos_x  =  0.0,
-   p1_pos_y  =  0.0;
-
-GLint position_loc;
-GLint texture_loc;
-GLint sampler_loc;
-
-GLuint texture_id;
-
-bool        update_pos = false;
-
-const GLfloat vertexArray[] = {
-  -1.0, -1.0,  0.0,
-   0.0,  1.0,
-  -1.0,  1.0,  0.0,
-   0.0,  0.0,
-   1.0,  1.0,  0.0,
-   1.0,  0.0,
-   1.0, -1.0,  0.0,
-   1.0,  1.0,
-  -1.0, -1.0,  0.0,
-   0.0,  1.0
-};
-
 
 void render(void)
 {
@@ -345,7 +340,7 @@ int main(void)
 		render();   // now we finally put something on the screen
 
 		if (++num_frames % 1000 == 0) {
-			gettimeofday( &t2, &tz );
+			gettimeofday(&t2, &tz);
 			float dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
 			printf("fps: %f\n", num_frames / dt);
 			printf("fill rate: %f MiB/s\n", (num_frames * WIDTH * HEIGHT * 4)/ (dt * 1024. * 1024.));
