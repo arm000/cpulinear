@@ -43,18 +43,60 @@ unsigned int upload_size = 0;
 int upload = 0;
 int fillrate = 0;
 
-const GLfloat vertexArray[] = {
-  -1.0, -1.0,  0.0,
-   0.0,  1.0,
-  -1.0,  1.0,  0.0,
-   0.0,  0.0,
-   1.0,  1.0,  0.0,
-   1.0,  0.0,
-   1.0, -1.0,  0.0,
-   1.0,  1.0,
-  -1.0, -1.0,  0.0,
-   0.0,  1.0
+GLfloat vertexArray[] = {
+	-1.0, -1.0,  0.0, // bottom left
+	 0.0,  1.0,
+	-1.0,  1.0,  0.0, // top left
+	 0.0,  0.0,
+	 1.0,  1.0,  0.0, // top right
+	 1.0,  0.0,
+	 1.0, -1.0,  0.0, // bottom right
+	 1.0,  1.0,
+	-1.0, -1.0,  0.0,
+	 0.0,  1.0
 };
+
+GLfloat vertexArray90[] = {
+	-1.0, -1.0,  0.0, // bottom left
+	 1.0,  1.0,
+	-1.0,  1.0,  0.0, // top left
+	 0.0,  1.0,
+	 1.0,  1.0,  0.0, // top right
+	 0.0,  0.0,
+	 1.0, -1.0,  0.0, // bottom right
+	 1.0,  0.0,
+	-1.0, -1.0,  0.0,
+	 1.0,  1.0
+};
+
+GLfloat vertexArray180[] = {
+	-1.0, -1.0,  0.0, // bottom left
+	 1.0,  0.0,
+	-1.0,  1.0,  0.0, // top left
+	 1.0,  1.0,
+	 1.0,  1.0,  0.0, // top right
+	 0.0,  1.0,
+	 1.0, -1.0,  0.0, // bottom right
+	 0.0,  0.0,
+	-1.0, -1.0,  0.0,
+	 1.0,  0.0
+};
+
+GLfloat vertexArray270[] = {
+	-1.0, -1.0,  0.0, // bottom left
+	 0.0,  0.0,
+	-1.0,  1.0,  0.0, // top left
+	 1.0,  0.0,
+	 1.0,  1.0,  0.0, // top right
+	 1.0,  1.0,
+	 1.0, -1.0,  0.0, // bottom right
+	 0.0,  1.0,
+	-1.0, -1.0,  0.0,
+	 0.0,  0.0
+};
+
+GLfloat *vtx = &vertexArray[0];
+GLfloat *tex = &vertexArray[3];
 
 const char vertex_src[] =
 	"attribute vec4 a_position;   \n"
@@ -149,11 +191,11 @@ void render(void)
 	}
 
 	glVertexAttribPointer(position_loc, 3, GL_FLOAT, GL_FALSE,
-			      5 * sizeof (GLfloat), vertexArray);
+			      5 * sizeof (GLfloat), vtx);
 	glEnableVertexAttribArray(position_loc);
 
 	glVertexAttribPointer(texture_loc, 2, GL_FLOAT, GL_FALSE,
-			      5 * sizeof (GLfloat), &vertexArray[3]);
+			      5 * sizeof (GLfloat), tex);
 	glEnableVertexAttribArray(texture_loc);
 
 	// Bind the texture
@@ -199,10 +241,11 @@ int main(int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 		struct option long_options[] = {
-			{"help",     no_argument,      &help,      1 },
-			{"upload",   no_argument,      &upload,    1 },
-			{"fillrate", no_argument,      &fillrate,  1 },
-			{0,          0,                0,          0 }
+			{"help",     no_argument,       &help,      1 },
+			{"upload",   no_argument,       &upload,    1 },
+			{"fillrate", no_argument,       &fillrate,  1 },
+			{"rotate",   required_argument, 0,          0 },
+			{0,          0,                 0,          0 }
 		};
 
 		c = getopt_long_only(argc, argv, "", long_options,
@@ -212,6 +255,27 @@ int main(int argc, char **argv)
 
 		switch (c) {
 		case 0:
+			if (strcmp(long_options[option_index].name, "rotate") == 0) {
+				int rot = atoi(optarg);
+				switch(rot) {
+				case 90:
+					vtx = &vertexArray90[0];
+					tex = &vertexArray90[3];
+					break;
+				case 180:
+					vtx = &vertexArray180[0];
+					tex = &vertexArray180[3];
+					break;
+				case 270:
+					vtx = &vertexArray270[0];
+					tex = &vertexArray270[3];
+					break;
+				default:
+					printf("invalid rotation, must be one of: 90, 180, 270\n");
+					exit(1);
+					break;
+				}
+			}
 			break;
 
 		case '?':
@@ -224,7 +288,7 @@ int main(int argc, char **argv)
 	}
 
 	if (help || (fillrate ^ upload == 0)) {
-		printf("usage: %s: [--fillrate|--upload]\n", basename(argv[0]));
+		printf("usage: %s: [ --rotate {90,180,270} ] [--fillrate|--upload]\n", basename(argv[0]));
 		exit(0);
 	}
 
