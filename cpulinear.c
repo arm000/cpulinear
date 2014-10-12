@@ -12,6 +12,13 @@
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
 
+#include "1.h"
+#include "2.h"
+#include "3.h"
+#include "4.h"
+
+GLubyte *textures[4];
+
 #define WIDTH 256
 #define HEIGHT 256
 
@@ -73,15 +80,6 @@ GLuint upload_texture(void)
    // Texture object handle
    GLuint textureId;
 
-   // 2x2 Image, 3 bytes per pixel (R, G, B)
-   GLubyte pixels[4 * 3] =
-   {
-      255,   0,   0, // Red
-        0, 255,   0, // Green
-        0,   0, 255, // Blue
-      255, 255,   0  // Yellow
-   };
-
    // Use tightly packed data
    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -92,8 +90,8 @@ GLuint upload_texture(void)
    glBindTexture(GL_TEXTURE_2D, textureId);
 
    // Load the texture
-   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE,
-		pixels);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+		textures[0]);
 
    // Set the filtering mode
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -122,23 +120,24 @@ bool        update_pos = false;
 
 const GLfloat vertexArray[] = {
   -1.0, -1.0,  0.0,
-   0.0,  0.0,
-  -1.0,  1.0,  0.0,
    0.0,  1.0,
+  -1.0,  1.0,  0.0,
+   0.0,  0.0,
    1.0,  1.0,  0.0,
-   1.0,  1.0,
-   1.0, -1.0,  0.0,
    1.0,  0.0,
+   1.0, -1.0,  0.0,
+   1.0,  1.0,
   -1.0, -1.0,  0.0,
-   0.0,  0.0
+   0.0,  1.0
 };
 
 
 void render(void)
 {
 	static int donesetup = 0;
-
 	static XWindowAttributes gwa;
+	static int i=0;
+	static int n=0;
 
 	// draw
 	if (!donesetup) {
@@ -148,7 +147,6 @@ void render(void)
 		glClearColor(0.08, 0.06, 0.07, 1.);    // background color
 		donesetup = 1;
 	}
-//	glClear(GL_COLOR_BUFFER_BIT);
 
 	glVertexAttribPointer(position_loc, 3, GL_FLOAT, GL_FALSE,
 			      5 * sizeof (GLfloat), vertexArray);
@@ -161,6 +159,14 @@ void render(void)
 	// Bind the texture
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture_id);
+
+	// Load the texture
+	textures[i][n/4] = 0;
+	n++;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+		     textures[i]);
+	i++;
+	i = i % 4;
 
 	// Set the sampler texture unit to 0
 	glUniform1i(sampler_loc, 0);
@@ -291,6 +297,12 @@ int main(void)
 
 	glLinkProgram(shaderProgram);    // link the program
 	glUseProgram(shaderProgram);    // and select it for usage
+
+	// prepare the textures
+	textures[0] = gimp_image_1.pixel_data;
+	textures[1] = gimp_image_2.pixel_data;
+	textures[2] = gimp_image_3.pixel_data;
+	textures[3] = gimp_image_4.pixel_data;
 
 	// upload the texture
 	texture_id = upload_texture();
