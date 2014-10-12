@@ -319,6 +319,7 @@ int main(int argc, char **argv)
 
 	// associate the egl-context with the egl-surface
 	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
+	eglSwapInterval(egl_display, 0);
 
 
 	///////  the openGL part  /////////////////////////////////////
