@@ -137,7 +137,6 @@ void render(void)
 	static int donesetup = 0;
 	static XWindowAttributes gwa;
 	static int i=0;
-	static int n=0;
 
 	// draw
 	if (!donesetup) {
@@ -161,8 +160,6 @@ void render(void)
 	glBindTexture(GL_TEXTURE_2D, texture_id);
 
 	// Load the texture
-	textures[i][n/4] = 0;
-	n++;
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
 		     textures[i]);
 	i++;
@@ -347,7 +344,7 @@ int main(void)
 
 		render();   // now we finally put something on the screen
 
-		if (++num_frames % 100 == 0) {
+		if (++num_frames % 1000 == 0) {
 			gettimeofday( &t2, &tz );
 			float dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
 			printf("fps: %f\n", num_frames / dt);
