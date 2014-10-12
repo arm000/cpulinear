@@ -4,7 +4,9 @@
 #include <stdbool.h>
 #include <sys/time.h>
 #include <math.h>
+#include <unistd.h>
 #include <libgen.h>
+#include <getopt.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -36,6 +38,10 @@ GLint sampler_loc;
 GLuint texture_id;
 
 bool update_pos = false;
+float upload_dt = 0.;
+unsigned int upload_size = 0;
+int upload = 0;
+int fillrate = 0;
 
 const GLfloat vertexArray[] = {
   -1.0, -1.0,  0.0,
@@ -132,7 +138,6 @@ void render(void)
 {
 	static int donesetup = 0;
 	static XWindowAttributes gwa;
-	static int i=0;
 
 	// draw
 	if (!donesetup) {
@@ -155,11 +160,23 @@ void render(void)
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture_id);
 
-	// Load the texture
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-		     textures[i]);
-	i++;
-	i = i % 4;
+	if (upload) {
+		static int i=0;
+		struct timezone tz;
+		static struct timeval t1, t2;
+
+		gettimeofday(&t1, &tz);
+
+		// Load the texture
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+			     textures[i]);
+		gettimeofday(&t2, &tz);
+		upload_dt += t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
+		upload_size += WIDTH * HEIGHT * 4;
+
+		i++;
+		i = i % 4;
+	}
 
 	// Set the sampler texture unit to 0
 	glUniform1i(sampler_loc, 0);
@@ -176,6 +193,41 @@ void render(void)
 
 int main(int argc, char **argv)
 {
+	int c;
+	int help = 0;
+
+	while (1) {
+		int option_index = 0;
+		struct option long_options[] = {
+			{"help",     no_argument,      &help,      1 },
+			{"upload",   no_argument,      &upload,    1 },
+			{"fillrate", no_argument,      &fillrate,  1 },
+			{0,          0,                0,          0 }
+		};
+
+		c = getopt_long_only(argc, argv, "", long_options,
+				     &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 0:
+			break;
+
+		case '?':
+			help = 1;
+			break;
+
+		default:
+			printf("?? getopt returned character code 0%o ??\n", c);
+		}
+	}
+
+	if (help || (fillrate ^ upload == 0)) {
+		printf("usage: %s: [--fillrate|--upload]\n", basename(argv[0]));
+		exit(0);
+	}
+
 	// open the standard display (the primary screen)
 	x_display = XOpenDisplay(NULL);
 	if (x_display == NULL) {
@@ -339,8 +391,15 @@ int main(int argc, char **argv)
 			gettimeofday(&t2, &tz);
 			float dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
 			printf("fps: %f\n", num_frames / dt);
-			printf("fill rate: %f MiB/s\n", (num_frames * WIDTH * HEIGHT * 4)/ (dt * 1024. * 1024.));
+			if (fillrate) {
+				printf("fill rate: %f MiB/s\n", (num_frames * WIDTH * HEIGHT * 4)/ (dt * 1024. * 1024.));
+			}
+			if (upload) {
+				printf("texture upload rate: %f MiB/s\n", (upload_size) / (upload_dt * 1024. * 1024.));
+			}
 			num_frames = 0;
+			upload_dt = 0.;
+			upload_size = 0;
 			t1 = t2;
 		}
 	}
