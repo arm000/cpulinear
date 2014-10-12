@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <sys/time.h>
 #include <math.h>
+#include <libgen.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -173,13 +174,8 @@ void render(void)
 /////////////////////////////////////////////////////////////////////
 
 
-int main(void)
+int main(int argc, char **argv)
 {
-	///////  the X11 part  //////////////////////////////////////
-	// in the first part the program opens a connection to the
-	// X11 window manager
-	//
-
 	// open the standard display (the primary screen)
 	x_display = XOpenDisplay(NULL);
 	if (x_display == NULL) {
@@ -215,7 +211,7 @@ int main(void)
 
 	// make the window visible on the screen
 	XMapWindow(x_display, win);
-	XStoreName(x_display, win, "GL test" ); // give the window a name
+	XStoreName(x_display, win, basename(argv[0])); // give the window a name
 
 	egl_display = eglGetDisplay((EGLNativeDisplayType) x_display);
 	if (egl_display == EGL_NO_DISPLAY) {
