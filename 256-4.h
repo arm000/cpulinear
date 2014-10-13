@@ -5,7 +5,7 @@ static struct {
   unsigned int 	 height;
   unsigned int 	 bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */ 
   unsigned char	 pixel_data[256 * 256 * 4 + 1];
-} gimp_image_4 = {
+} gimp_image_256_4 = {
   256, 256, 4,
   "\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377"
   "\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377"

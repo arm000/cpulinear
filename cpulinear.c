@@ -15,15 +15,20 @@
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
 
-#include "1.h"
-#include "2.h"
-#include "3.h"
-#include "4.h"
+#include "256-1.h"
+#include "256-2.h"
+#include "256-3.h"
+#include "256-4.h"
+
+#include "512-1.h"
+#include "512-2.h"
+#include "512-3.h"
+#include "512-4.h"
 
 GLubyte *textures[4];
 
-#define WIDTH 256
-#define HEIGHT 256
+int width = 256;
+int height = 256;
 
 Display    *x_display;
 Window      win;
@@ -166,7 +171,7 @@ GLuint upload_texture(void)
    glBindTexture(GL_TEXTURE_2D, textureId);
 
    // Load the texture
-   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
 		textures[0]);
 
    // Set the filtering mode
@@ -210,11 +215,11 @@ void render(void)
 		gettimeofday(&t1, &tz);
 
 		// Load the texture
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
 			     textures[i]);
 		gettimeofday(&t2, &tz);
 		upload_dt += t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
-		upload_size += WIDTH * HEIGHT * 4;
+		upload_size += width * height * 4;
 
 		i++;
 		i = i % 4;
@@ -245,6 +250,7 @@ int main(int argc, char **argv)
 			{"upload",   no_argument,       &upload,    1 },
 			{"fillrate", no_argument,       &fillrate,  1 },
 			{"rotate",   required_argument, 0,          0 },
+			{"size",     required_argument, 0,          0 },
 			{0,          0,                 0,          0 }
 		};
 
@@ -276,6 +282,19 @@ int main(int argc, char **argv)
 					break;
 				}
 			}
+			else if (strcmp(long_options[option_index].name, "size") == 0) {
+				int size = atoi(optarg);
+				switch(size) {
+				case 256:
+				case 512:
+					width = height = size;
+					break;
+				default:
+					printf("invalid size, must be one of: 256, 512\n");
+					exit(1);
+					break;
+				}
+			}
 			break;
 
 		case '?':
@@ -288,7 +307,7 @@ int main(int argc, char **argv)
 	}
 
 	if (help || (fillrate ^ upload == 0)) {
-		printf("usage: %s: [ --rotate {90,180,270} ] [--fillrate|--upload]\n", basename(argv[0]));
+		printf("usage: %s: [ --rotate 90|180|270 ] [ --size 256|512 ] [--fillrate|--upload]\n", basename(argv[0]));
 		exit(0);
 	}
 
@@ -308,7 +327,7 @@ int main(int argc, char **argv)
 	// create a window with the provided parameters
 	win = XCreateWindow (
 		x_display, root,
-		0, 0, WIDTH, HEIGHT, 0,
+		0, 0, width, height, 0,
 		CopyFromParent, InputOutput,
 		CopyFromParent, CWEventMask,
 		&swa);
@@ -404,10 +423,20 @@ int main(int argc, char **argv)
 	glUseProgram(shaderProgram);    // and select it for usage
 
 	// prepare the textures
-	textures[0] = gimp_image_1.pixel_data;
-	textures[1] = gimp_image_2.pixel_data;
-	textures[2] = gimp_image_3.pixel_data;
-	textures[3] = gimp_image_4.pixel_data;
+	if (width == 512 && height == 512) {
+		textures[0] = gimp_image_512_1.pixel_data;
+		textures[1] = gimp_image_512_2.pixel_data;
+		textures[2] = gimp_image_512_3.pixel_data;
+		textures[3] = gimp_image_512_4.pixel_data;
+	} else if (width == 256 && height == 256) {
+		textures[0] = gimp_image_256_1.pixel_data;
+		textures[1] = gimp_image_256_2.pixel_data;
+		textures[2] = gimp_image_256_3.pixel_data;
+		textures[3] = gimp_image_256_4.pixel_data;
+	} else {
+		printf("unknown width/height (%d/%d)\n", width, height);
+		exit(1);
+	}
 
 	// upload the texture
 	texture_id = upload_texture();
@@ -457,7 +486,7 @@ int main(int argc, char **argv)
 			float dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
 			printf("fps: %f\n", num_frames / dt);
 			if (fillrate) {
-				printf("fill rate: %f MiB/s\n", (num_frames * WIDTH * HEIGHT * 4)/ (dt * 1024. * 1024.));
+				printf("fill rate: %f MiB/s\n", (num_frames * width * height * 4)/ (dt * 1024. * 1024.));
 			}
 			if (upload) {
 				printf("texture upload rate: %f MiB/s\n", (upload_size) / (upload_dt * 1024. * 1024.));
