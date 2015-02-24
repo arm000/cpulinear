@@ -255,15 +255,14 @@ static void render(void)
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 5);
 
-	// get the rendered buffer to the screen
 	{
-		static int x=0;
-		x++;
-		if ((x % 256) == 0) {
-//		if (1) {
-			eglSwapBuffers(egl_display, egl_surface);
-			x = 0;
-		}
+		struct timezone tz;
+		struct timeval t1, t2;
+		gettimeofday(&t1, &tz);
+		eglSwapBuffers(egl_display, egl_surface);
+		gettimeofday(&t2, &tz);
+		float dt = t2.tv_sec*1000. - t1.tv_sec*1000. + (t2.tv_usec - t1.tv_usec) * 1e-3;
+		printf("eglSwapBuffers took %fms\n", dt);
 	}
 }
 
@@ -547,7 +546,7 @@ int main(int argc, char **argv)
 
 		render();   // now we finally put something on the screen
 
-		if (++num_frames % 1000 == 0) {
+		if (++num_frames % 100 == 0) {
 			gettimeofday(&t2, &tz);
 			float dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
 			printf("fps: %f\n", num_frames / dt);
