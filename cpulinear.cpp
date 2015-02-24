@@ -8,9 +8,17 @@
 #include <libgen.h>
 #include <getopt.h>
 
+#ifdef __ANDROID__
+#include <ui/DisplayInfo.h>
+#include <gui/Surface.h>
+#include <gui/SurfaceComposerClient.h>
+#include <gui/ISurfaceComposer.h>
+#include <android/native_window.h>
+#else
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
+#endif
 
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
@@ -24,6 +32,19 @@
 #include "512-2.h"
 #include "512-3.h"
 #include "512-4.h"
+
+
+#ifdef __ANDROID__
+using namespace android;
+
+static sp<Surface> g_android_surface;
+static sp<SurfaceControl> g_android_control;
+static sp<SurfaceComposerClient> g_android_composer;
+static sp<ANativeWindow> g_android_window;
+
+typedef void Display;
+typedef void *Window;
+#endif
 
 GLubyte *textures[4];
 
@@ -122,7 +143,7 @@ const char fragment_src[] =
 	"  gl_FragColor = texture2D(s_texture, v_texCoord);  \n"
 	"}                                                   \n";
 
-void print_shader_info_log(GLuint shader)
+static void print_shader_info_log(GLuint shader)
 {
 	GLint length;
 	GLint success;
@@ -144,7 +165,7 @@ void print_shader_info_log(GLuint shader)
 }
 
 
-GLuint load_shader(const char *shader_source, GLenum type)
+static GLuint load_shader(const char *shader_source, GLenum type)
 {
 	GLuint shader = glCreateShader(type);
 
@@ -156,7 +177,7 @@ GLuint load_shader(const char *shader_source, GLenum type)
 	return shader;
 }
 
-GLuint upload_texture(void)
+static GLuint upload_texture(void)
 {
    // Texture object handle
    GLuint textureId;
@@ -181,16 +202,20 @@ GLuint upload_texture(void)
    return textureId;
 }
 
-void render(void)
+static void render(void)
 {
 	static int donesetup = 0;
+#ifndef ANDROID
 	static XWindowAttributes gwa;
+#endif
 
 	// draw
 	if (!donesetup) {
+#ifndef ANDROID
 		XWindowAttributes gwa;
 		XGetWindowAttributes(x_display, win, &gwa);
 		glViewport(0, 0, gwa.width, gwa.height);
+#endif
 		glClearColor(0.08, 0.06, 0.07, 1.);    // background color
 		donesetup = 1;
 	}
@@ -231,7 +256,15 @@ void render(void)
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 5);
 
 	// get the rendered buffer to the screen
-	eglSwapBuffers(egl_display, egl_surface);
+	{
+		static int x=0;
+		x++;
+		if ((x % 256) == 0) {
+//		if (1) {
+			eglSwapBuffers(egl_display, egl_surface);
+			x = 0;
+		}
+	}
 }
 
 
@@ -306,11 +339,40 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (help || (fillrate ^ upload == 0)) {
+	if (help || ((fillrate ^ upload) == 0)) {
 		printf("usage: %s: [ --rotate 90|180|270 ] [ --size 256|512 ] [--fillrate|--upload]\n", basename(argv[0]));
 		exit(0);
 	}
 
+#ifdef __ANDROID__
+	g_android_composer = new SurfaceComposerClient;
+	DisplayInfo dpy_info;
+	g_android_composer->getDisplayInfo(
+		g_android_composer->getBuiltInDisplay(ISurfaceComposer::eDisplayIdMain),
+		&dpy_info);
+//	g_width = dpy_info.w;
+//	g_height = dpy_info.h;
+	g_android_control =
+		g_android_composer->createSurface(String8("glbench"),
+						  width, height,
+						  HAL_PIXEL_FORMAT_RGBA_8888, 0);
+//	CHECK(g_android_control != NULL);
+	SurfaceComposerClient::openGlobalTransaction();
+	g_android_control->setLayer(200000);
+	g_android_control->setPosition(0, 0);
+	g_android_control->show();
+	SurfaceComposerClient::closeGlobalTransaction();
+	g_android_surface = g_android_control->getSurface();
+	g_android_window = g_android_surface.get();
+	win = g_android_window.get();
+//	CHECK(g_xlib_window);
+	egl_display = eglGetDisplay(NULL);
+	if (egl_display == EGL_NO_DISPLAY) {
+		fprintf(stderr, "Got no EGL display.\n");
+		return 1;
+	}
+//	GetXVisual();
+#else
 	// open the standard display (the primary screen)
 	x_display = XOpenDisplay(NULL);
 	if (x_display == NULL) {
@@ -353,6 +415,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Got no EGL display.\n");
 		return 1;
 	}
+#endif
 
 	if (!eglInitialize(egl_display, NULL, NULL)) {
 		fprintf(stderr, "Unable to initialize EGL\n");
@@ -380,7 +443,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	egl_surface = eglCreateWindowSurface(egl_display, ecfg, win, NULL);
+	egl_surface = eglCreateWindowSurface(egl_display, ecfg,
+					     (EGLNativeWindowType)win, NULL);
 	if (egl_surface == EGL_NO_SURFACE) {
 		fprintf(stderr, "Unable to create EGL surface (eglError: %d)\n",
 			eglGetError());
@@ -402,7 +466,7 @@ int main(int argc, char **argv)
 
 	// associate the egl-context with the egl-surface
 	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
-	eglSwapInterval(egl_display, 0);
+//	eglSwapInterval(egl_display, 0);
 
 
 	///////  the openGL part  /////////////////////////////////////
@@ -470,6 +534,7 @@ int main(int argc, char **argv)
 	bool quit = false;
 	while (!quit) {
 
+#ifndef ANDROID
 		// check for events from the x-server
 		while (XPending(x_display)) {
 			XEvent  xev;
@@ -478,6 +543,7 @@ int main(int argc, char **argv)
 			if (xev.type == KeyPress)
 				quit = true;
 		}
+#endif
 
 		render();   // now we finally put something on the screen
 
@@ -503,8 +569,10 @@ int main(int argc, char **argv)
 	eglDestroyContext(egl_display, egl_context);
 	eglDestroySurface(egl_display, egl_surface);
 	eglTerminate(egl_display);
+#ifndef ANDROID
 	XDestroyWindow(x_display, win);
 	XCloseDisplay(x_display);
+#endif
 
 	return 0;
 }
